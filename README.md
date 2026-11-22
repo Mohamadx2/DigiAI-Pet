@@ -30,8 +30,11 @@ Raise, care for, and train a Digimon-like creature that walks around your screen
 - **Sickness & care consequences**  
   Neglect leads to declining health. Medicine and good care restore it. Stamina gates intense activities.
 
-- **Save / Load**  
-  Progress is automatically saved. Resume exactly where you left off.
+- **Save / Load**
+  Progress is automatically saved, and the main menu now includes explicit **Save Game** and **Load Game** buttons.
+
+- **Random pet thoughts**
+  Mimi occasionally pops up playful cloud bubbles such as “hmm feeling eepy!!”, “mhhm hungery :o”, and “let's play :-D”, with lines adapting to hunger, energy, and happiness.
 
 - **Optional notification sounds**  
   Short beeps and status sounds for low needs, feeding, level-up style events, and sickness. (Generated or loaded from `assets/sounds/`)
@@ -69,7 +72,8 @@ python main.py
 | Sleep               | Click Sleep card             |
 | Give Medicine       | Click Medicine card          |
 | Train / Learn Game  | Click Train card             |
-| Pause / Menu        | ESC                          |
+| Main menu           | Opens at startup or press ESC |
+| Save / Load         | Main menu buttons            |
 | Quit                | Close window or Q            |
 
 The pet will also show need icons above its head when a stat is critically low.

@@ -40,6 +40,16 @@ class UI:
         self.font_sm = pygame.font.SysFont("Segoe UI", 16)
         self.font_xs = pygame.font.SysFont("Segoe UI", 14)
 
+        menu_w, menu_h = 180, 52
+        menu_x = (WINDOW_WIDTH - menu_w) // 2
+        self.menu_button_rects = {
+            "save": pygame.Rect(menu_x, 182, menu_w, menu_h),
+            "load": pygame.Rect(menu_x, 246, menu_w, menu_h),
+            "resume": pygame.Rect(menu_x, 310, menu_w, menu_h),
+            "quit": pygame.Rect(menu_x, 374, menu_w, menu_h),
+        }
+        self.menu_hovered: Optional[str] = None
+
         # Action cards at the bottom
         card_w, card_h = 130, 58
         gap = 14
@@ -69,8 +79,17 @@ class UI:
     def handle_hover(self, mouse_pos: Tuple[int, int]):
         for card in self.cards:
             card.hovered = card.rect.collidepoint(mouse_pos)
+        self.menu_hovered = next(
+            (key for key, rect in self.menu_button_rects.items() if rect.collidepoint(mouse_pos)),
+            None,
+        )
 
-    def handle_click(self, mouse_pos: Tuple[int, int]) -> Optional[str]:
+    def handle_click(self, mouse_pos: Tuple[int, int], menu_open: bool = False) -> Optional[str]:
+        if menu_open:
+            for key, rect in self.menu_button_rects.items():
+                if rect.collidepoint(mouse_pos):
+                    return f"menu_{key}"
+            return None
         for card in self.cards:
             if card.rect.collidepoint(mouse_pos):
                 return card.key
@@ -137,6 +156,79 @@ class UI:
             s.fill((20, 25, 40, 180))
             surface.blit(s, bg.topleft)
             surface.blit(txt, rect)
+
+    def draw_thought_bubble(self, surface: pygame.Surface, pet_x: float, pet_y: float, text: str):
+        """Draw a soft cloud thought bubble above the wandering pet."""
+        if not text:
+            return
+        max_width = 245
+        words = text.split()
+        lines: List[str] = []
+        current = ""
+        for word in words:
+            candidate = f"{current} {word}".strip()
+            if self.font_sm.size(candidate)[0] <= max_width - 26:
+                current = candidate
+            else:
+                if current:
+                    lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+
+        line_h = 21
+        bubble_w = min(max_width, max(self.font_sm.size(line)[0] for line in lines) + 26)
+        bubble_h = len(lines) * line_h + 22
+        bubble_x = max(12, min(WINDOW_WIDTH - bubble_w - 12, int(pet_x - bubble_w / 2)))
+        bubble_y = max(132, int(pet_y) - 128 - bubble_h)
+
+        shadow = pygame.Surface((bubble_w + 8, bubble_h + 8), pygame.SRCALPHA)
+        pygame.draw.rect(shadow, (10, 14, 25, 100), shadow.get_rect(), border_radius=18)
+        surface.blit(shadow, (bubble_x - 4, bubble_y + 5))
+
+        bubble = pygame.Surface((bubble_w, bubble_h), pygame.SRCALPHA)
+        pygame.draw.rect(bubble, (247, 250, 255, 238), bubble.get_rect(), border_radius=18)
+        pygame.draw.rect(bubble, (124, 205, 242, 255), bubble.get_rect(), 2, border_radius=18)
+        surface.blit(bubble, (bubble_x, bubble_y))
+
+        tail = [
+            (bubble_x + bubble_w // 2 - 10, bubble_y + bubble_h - 1),
+            (bubble_x + bubble_w // 2 + 1, bubble_y + bubble_h + 13),
+            (bubble_x + bubble_w // 2 + 13, bubble_y + bubble_h - 1),
+        ]
+        pygame.draw.polygon(surface, (247, 250, 255), tail)
+        pygame.draw.polygon(surface, (124, 205, 242), tail, 2)
+        pygame.draw.circle(surface, (247, 250, 255), (bubble_x + bubble_w // 2 + 25, bubble_y + bubble_h + 21), 5)
+        pygame.draw.circle(surface, (124, 205, 242), (bubble_x + bubble_w // 2 + 25, bubble_y + bubble_h + 21), 5, 1)
+
+        for i, line in enumerate(lines):
+            rendered = self.font_sm.render(line, True, (45, 53, 77))
+            rect = rendered.get_rect(center=(bubble_x + bubble_w // 2, bubble_y + 13 + i * line_h + line_h // 2))
+            surface.blit(rendered, rect)
+
+    def draw_main_menu(self, surface: pygame.Surface):
+        """Draw the paused main menu over the current game scene."""
+        overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((8, 12, 24, 190))
+        surface.blit(overlay, (0, 0))
+
+        panel = pygame.Rect(WINDOW_WIDTH // 2 - 245, 74, 490, 430)
+        pygame.draw.rect(surface, (33, 42, 65), panel, border_radius=20)
+        pygame.draw.rect(surface, ACCENT, panel, 3, border_radius=20)
+        title = self.font_lg.render("DigiAI-Pet Main Menu", True, (240, 248, 255))
+        surface.blit(title, title.get_rect(center=(panel.centerx, 108)))
+        hint = self.font_sm.render("Your pet is paused while this menu is open", True, (181, 202, 224))
+        surface.blit(hint, hint.get_rect(center=(panel.centerx, 143)))
+
+        labels = {"save": "Save Game", "load": "Load Game", "resume": "Resume", "quit": "Quit"}
+        colors = {"save": (110, 215, 170), "load": (120, 190, 255), "resume": (255, 220, 100), "quit": (255, 130, 145)}
+        for key, rect in self.menu_button_rects.items():
+            color = colors[key]
+            fill = tuple(min(255, c + 18) for c in color) if self.menu_hovered == key else (51, 64, 91)
+            pygame.draw.rect(surface, fill, rect, border_radius=12)
+            pygame.draw.rect(surface, color, rect, 2, border_radius=12)
+            label = self.font_md.render(labels[key], True, TEXT_COLOR)
+            surface.blit(label, label.get_rect(center=rect.center))
 
     def draw_need_icon(self, surface: pygame.Surface, pet_x: float, pet_y: float, icon: Optional[str]):
         if not icon:

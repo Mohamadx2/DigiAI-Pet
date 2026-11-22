@@ -17,7 +17,7 @@ import pygame
 
 from .config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, TITLE, BG_COLOR,
-    CRITICAL, EVOLUTION_LINE
+    CRITICAL, LOW, EVOLUTION_LINE
 )
 from .pet import Pet
 from .ui import UI
@@ -95,6 +95,51 @@ class Game:
         self.font_debug = pygame.font.SysFont("Consolas", 14)
         self.font_badge = pygame.font.SysFont("Segoe UI", 13, bold=True)
         self.sprites: Dict[int, Optional[pygame.Surface]] = self._load_stage_sprites()
+        self.menu_open = True
+        self.thought_text = ""
+        self.thought_timer = 0.0
+        self.next_thought_timer = 1.5
+
+    def _pick_thought(self) -> str:
+        """Choose a playful thought, with a few lines reflecting current needs."""
+        s = self.pet.state
+        if s.is_sleeping or s.energy < CRITICAL:
+            pool = [
+                "hmm feeling eepy!!", "five more minutes... zzz",
+                "my paws need a tiny nap", "dreaming of fluffy clouds",
+            ]
+        elif s.hunger < CRITICAL:
+            pool = [
+                "mhhm hungery :o", "is that a snack I smell?",
+                "my tummy is doing a drum solo", "one tiny treat, please?",
+            ]
+        elif s.happiness < LOW:
+            pool = [
+                "let's play  :-D", "could use a cuddle...",
+                "where did all the fun go?", "boop my nose?",
+            ]
+        else:
+            pool = [
+                "let's play  :-D", "I wonder what's over there?",
+                "sparkles!! so many sparkles!!", "I am a very clever little pet",
+                "zoomies loading...", "did I just see a butterfly?",
+                "my wings feel extra floofy today", "boop!",
+                "I shall conquer the sofa", "being cute is hard work",
+                "I have important pet business", "what if the moon is made of pudding?",
+                "*happy tiny noises*",
+            ]
+        return random.choice(pool)
+
+    def _update_thought(self, dt: float):
+        self.thought_timer = max(0.0, self.thought_timer - dt)
+        if self.thought_timer > 0.0:
+            return
+        self.thought_text = ""
+        self.next_thought_timer = max(0.0, self.next_thought_timer - dt)
+        if self.next_thought_timer <= 0.0:
+            self.thought_text = self._pick_thought()
+            self.thought_timer = random.uniform(3.2, 5.0)
+            self.next_thought_timer = random.uniform(4.0, 8.0)
 
     # ------------------------------------------------------------------
     # Optional sprite loading (falls back to procedural art per stage)
@@ -488,6 +533,9 @@ class Game:
 
         if msg:
             self.ui.set_message(msg)
+            if key in {"feed", "play", "sleep"}:
+                self.thought_text = self._pick_thought()
+                self.thought_timer = 3.5
 
     def _finish_minigame(self):
         success = self.minigame.success
@@ -511,7 +559,9 @@ class Game:
                 if event.type == pygame.QUIT:
                     self.running = False
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
+                    if event.key == pygame.K_ESCAPE:
+                        self.menu_open = not self.menu_open
+                    elif event.key == pygame.K_q:
                         self.running = False
                     elif event.key == pygame.K_m:
                         enabled = self.sounds.toggle()
@@ -521,11 +571,26 @@ class Game:
                             self.minigame.react()
                             self._finish_minigame()
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    if self.minigame.active and self.minigame.phase == "show":
+                    if self.menu_open:
+                        action = self.ui.handle_click(event.pos, menu_open=True)
+                        if action == "menu_save":
+                            self.pet.save()
+                            self.ui.set_message("Game saved!")
+                        elif action == "menu_load":
+                            self.pet = Pet.load()
+                            self.thought_text = ""
+                            self.thought_timer = 0.0
+                            self.next_thought_timer = 1.0
+                            self.ui.set_message("Game loaded!")
+                        elif action == "menu_resume":
+                            self.menu_open = False
+                        elif action == "menu_quit":
+                            self.running = False
+                    elif self.minigame.active and self.minigame.phase == "show":
                         self.minigame.react()
                         self._finish_minigame()
                     else:
-                        action = self.ui.handle_click(event.pos)
+                        action = self.ui.handle_click(event.pos, menu_open=False)
                         if action:
                             self._handle_action(action)
 
@@ -533,11 +598,13 @@ class Game:
             mouse = pygame.mouse.get_pos()
             self.ui.handle_hover(mouse)
             self.ui.update(dt)
-            self.pet.update(dt)
-            self.minigame.update(dt)
-            self.evolution_effect_timer = max(0.0, self.evolution_effect_timer - dt)
+            if not self.menu_open:
+                self.pet.update(dt)
+                self.minigame.update(dt)
+                self._update_thought(dt)
+                self.evolution_effect_timer = max(0.0, self.evolution_effect_timer - dt)
 
-            evolved = self.pet.consume_evolution_event()
+            evolved = self.pet.consume_evolution_event() if not self.menu_open else None
             if evolved:
                 self.evolution_effect_timer = 2.5
                 self.sounds.play("success")
@@ -560,6 +627,7 @@ class Game:
             pygame.draw.rect(self.screen, (40, 48, 65), (0, WINDOW_HEIGHT - 150, WINDOW_WIDTH, 150))
 
             self._draw_pet(self.screen)
+            self.ui.draw_thought_bubble(self.screen, self.pet.x, self.pet.y, self.thought_text)
             self.ui.draw_need_icon(self.screen, self.pet.x, self.pet.y, self.pet.need_icon)
             self.ui.draw_bars(self.screen, self.pet.get_status_summary())
             self.ui.draw_cards(self.screen)
@@ -576,6 +644,9 @@ class Game:
                 txt = font.render(msg, True, (255, 230, 120))
                 rect = txt.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
                 self.screen.blit(txt, rect)
+
+            if self.menu_open:
+                self.ui.draw_main_menu(self.screen)
 
             pygame.display.flip()
 
