@@ -1,3 +1,5 @@
+
+
 """Configuration constants for DigiAI-Pet."""
 
 # Window
@@ -45,3 +47,51 @@ SAVE_FILE = "digipet_save.json"
 
 # Action cooldowns (seconds)
 ACTION_COOLDOWN = 1.2
+
+# Luminamon Evolution Line
+EVOLUTION_LINE = [
+    {
+        "stage": 0,
+        "level": "Level 1: In-Training",
+        "name": "Puwamon",
+        "attribute": "Vaccine",
+        "type": "Slime",
+        "sprite": "assets/puwamon.png",
+        "min_age": 0.0,
+        "min_learning": 0.0,
+        "min_actions": 0,
+    },
+    {
+        "stage": 1,
+        "level": "Level 2: Rookie",
+        "name": "Luminamon",
+        "attribute": "Vaccine",
+        "type": "Holy Beast",
+        "sprite": "assets/luminamon.png",
+        "min_age": 45.0,
+        "min_learning": 18.0,
+        "min_actions": 3,
+    },
+    {
+        "stage": 2,
+        "level": "Level 3: Champion",
+        "name": "Solarmon",
+        "attribute": "Vaccine",
+        "type": "Holy Knight",
+        "sprite": "assets/solarmon.png",
+        "min_age": 150.0,
+        "min_learning": 40.0,
+        "min_actions": 7,
+    },
+    {
+        "stage": 3,
+        "level": "Level 4: Ultimate",
+        "name": "Aethelmon",
+        "attribute": "Vaccine",
+        "type": "Archangel",
+        "sprite": "assets/aethelmon.png",
+        "min_age": 300.0,
+        "min_learning": 70.0,
+        "min_actions": 12,
+    },
+]

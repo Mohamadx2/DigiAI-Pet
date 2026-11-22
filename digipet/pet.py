@@ -1,5 +1,7 @@
+
+
 """
-Pet class – stats, needs, simple AI behavior, learning, save/load.
+Pet class – stats, needs, simple AI behavior, learning, evolution, save/load.
 """
 
 from __future__ import annotations
@@ -10,12 +12,13 @@ import time
 from dataclasses import dataclass, asdict, field
 from typing import Dict, Optional
 
-from .config import DECAY, CRITICAL, LOW, GOOD, SAVE_FILE
+from .config import DECAY, CRITICAL, LOW, GOOD, SAVE_FILE, EVOLUTION_LINE
 
 
 @dataclass
 class PetState:
-    name: str = "Agumon-chan"
+    name: str = "Puwamon"
+    evolution_stage: int = 0        # 0=Puwamon, 1=Luminamon, 2=Solarmon, 3=Aethelmon
     hunger: float = 80.0
     cleanliness: float = 85.0
     happiness: float = 75.0
@@ -36,6 +39,12 @@ class PetState:
 class Pet:
     def __init__(self, state: Optional[PetState] = None):
         self.state = state or PetState()
+        # Clamp stage to valid range and migrate legacy default name
+        max_stage = len(EVOLUTION_LINE) - 1
+        self.state.evolution_stage = max(0, min(max_stage, self.state.evolution_stage))
+        if self.state.name == "Agumon-chan":
+            self.state.name = EVOLUTION_LINE[self.state.evolution_stage]["name"]
+
         self.x = 450.0
         self.y = 320.0
         self.vx = 0.0
@@ -48,6 +57,55 @@ class Pet:
         self.action_cooldown = 0.0
         self.need_icon: Optional[str] = None
         self.need_icon_timer = 0.0
+        self._pending_evolution: Optional[dict] = None
+
+    # ------------------------------------------------------------------
+    # Evolution helpers
+    # ------------------------------------------------------------------
+    def get_evolution_info(self) -> dict:
+        idx = max(0, min(len(EVOLUTION_LINE) - 1, self.state.evolution_stage))
+        return EVOLUTION_LINE[idx]
+
+    def get_next_evolution_info(self) -> Optional[dict]:
+        next_idx = self.state.evolution_stage + 1
+        if next_idx < len(EVOLUTION_LINE):
+            return EVOLUTION_LINE[next_idx]
+        return None
+
+    def check_evolution(self) -> Optional[dict]:
+        """Evolve to the next stage when age, learning, care actions, and health allow."""
+        if self.state.is_sick or self.state.health < 50.0:
+            return None
+
+        next_stage = self.get_next_evolution_info()
+        if not next_stage:
+            return None
+
+        total_actions = (
+            self.state.total_feedings
+            + self.state.total_plays
+            + self.state.total_trains
+        )
+        if (
+            self.state.age_seconds >= next_stage["min_age"]
+            and self.state.learning >= next_stage["min_learning"]
+            and total_actions >= next_stage["min_actions"]
+        ):
+            self.state.evolution_stage = next_stage["stage"]
+            self.state.name = next_stage["name"]
+            self.state.happiness = min(100.0, self.state.happiness + 20.0)
+            self.state.health = min(100.0, self.state.health + 15.0)
+            self.state.stamina = min(100.0, self.state.stamina + 20.0)
+            self.need_icon = "learn"
+            self.need_icon_timer = 3.0
+            self._pending_evolution = next_stage
+            return next_stage
+        return None
+
+    def consume_evolution_event(self) -> Optional[dict]:
+        event = self._pending_evolution
+        self._pending_evolution = None
+        return event
 
     # ------------------------------------------------------------------
     # Core update
@@ -90,6 +148,7 @@ class Pet:
             self.state.happiness = max(0.0, self.state.happiness - 1.2 * dt)
             self.state.stamina = max(0.0, self.state.stamina - 0.8 * dt)
 
+        self.check_evolution()
         self._set_mood()
         self._update_movement(dt)
         self._update_animation(dt)
