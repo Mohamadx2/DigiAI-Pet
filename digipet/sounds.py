@@ -30,7 +30,7 @@ class SoundManager:
             self.enabled = False
 
     def _generate_tone(self, frequency: float, duration: float = 0.15,
-                       volume: float = 0.4, sample_rate: int = 22050) -> bytes:
+                       volume: float = 0.35, sample_rate: int = 22050) -> bytes:
         """Generate a simple sine-wave tone as raw 16-bit mono PCM."""
         import math
         n_samples = int(sample_rate * duration)
@@ -39,10 +39,12 @@ class SoundManager:
             t = i / sample_rate
             # Simple envelope to avoid clicks
             env = 1.0
-            if i < sample_rate * 0.01:
-                env = i / (sample_rate * 0.01)
-            elif i > n_samples - sample_rate * 0.02:
-                env = (n_samples - i) / (sample_rate * 0.02)
+            attack = int(sample_rate * 0.01)
+            release = int(sample_rate * 0.03)
+            if i < attack:
+                env = i / max(1, attack)
+            elif i > n_samples - release:
+                env = (n_samples - i) / max(1, release)
             sample = int(volume * 32767 * env * math.sin(2 * math.pi * frequency * t))
             buf += struct.pack("<h", max(-32767, min(32767, sample)))
         return bytes(buf)
@@ -52,7 +54,6 @@ class SoundManager:
             return None
         try:
             raw = self._generate_tone(frequency, duration)
-            # Write temporary wav and load (most reliable across pygame versions)
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
                 path = tmp.name
             with wave.open(path, "wb") as wf:
@@ -71,21 +72,21 @@ class SoundManager:
 
     def _generate_or_load(self):
         """Create built-in notification sounds."""
-        # Key events
-        self.sounds["feed"] = self._make_sound(520, 0.12)
-        self.sounds["clean"] = self._make_sound(440, 0.10)
-        self.sounds["play"] = self._make_sound(660, 0.15)
-        self.sounds["sleep"] = self._make_sound(280, 0.25)
+        self.sounds["feed"] = self._make_sound(520, 0.13)
+        self.sounds["clean"] = self._make_sound(440, 0.11)
+        self.sounds["play"] = self._make_sound(660, 0.16)
+        self.sounds["sleep"] = self._make_sound(260, 0.28)
         self.sounds["med"] = self._make_sound(380, 0.18)
         self.sounds["learn"] = self._make_sound(780, 0.20)
-        self.sounds["sick"] = self._make_sound(180, 0.30)
-        self.sounds["low"] = self._make_sound(220, 0.22)
-        self.sounds["click"] = self._make_sound(700, 0.06)
+        self.sounds["sick"] = self._make_sound(170, 0.32)
+        self.sounds["low"] = self._make_sound(210, 0.24)
+        self.sounds["click"] = self._make_sound(720, 0.055)
         self.sounds["success"] = self._make_sound(880, 0.18)
-        self.sounds["fail"] = self._make_sound(150, 0.25)
+        self.sounds["fail"] = self._make_sound(140, 0.26)
 
-        # Optional external overrides
-        assets_dir = os.path.join(os.path.dirname(__file__), "..", "assets", "sounds")
+        # Optional external overrides from assets/sounds/
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        assets_dir = os.path.join(base, "assets", "sounds")
         if os.path.isdir(assets_dir):
             for name in list(self.sounds.keys()):
                 path = os.path.join(assets_dir, f"{name}.wav")
