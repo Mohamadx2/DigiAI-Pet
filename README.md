@@ -1,125 +1,45 @@
 # DigiAI-Pet
 
-**A Windows desktop AI virtual pet** inspired by classic Tamagotchi needs systems and Digimon-style companions.
+**A web-based AI virtual pet** inspired by classic Tamagotchi needs systems and Digimon-style companions, migrated from the original Python + Pygame desktop app to React, TypeScript, and HTML5 Canvas.
 
-Raise, care for, and train a Digimon-like creature that walks around your screen, expresses needs through clear visual feedback, and can learn simple reaction/memory games. Built with pure Python + Pygame for easy running on Windows.
-
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
-![Pygame](https://img.shields.io/badge/Pygame-2.5%2B-green)
-![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
+Raise, care for, and train a Digimon-like creature that walks around your garden scene, climbs the garden tree, expresses needs through clear visual feedback, evolves across stages, and plays reaction/strategy minigames.
 
 ## Features
 
-- **Six core needs / stats**
-  - Hunger
-  - Cleanliness (Toilet)
-  - Happiness / Fun (Play)
-  - Energy (Sleep)
-  - Health (Sickness risk)
-  - Stamina (affects activity & training)
-
-- **Card-style action interface**  
-  Large, clear buttons for: **Feed**, **Toilet/Clean**, **Play**, **Sleep**, **Medicine**, **Train**.
-
-- **Simple autonomous movement**  
-  The pet walks slowly around the larger garden scene, reacts to low needs, and shows different postures/animations based on mood and energy.
-
-- **Learning / Intelligence system**  
-  Train with Rock-Paper-Scissors or Tic-Tac-Toe. Repeated success raises a Learning score and can improve future performance ("the pet learns").
-
-- **Speed training**  
-  Play the Jump Obstacles game to build the pet's persistent Speed stat.
-
-- **Garden day/night scene**  
-  The uploaded garden image is used as the scene background, with darker real-time night lighting and a small smiling sun during daytime.
-
-- **Sickness & care consequences**  
-  Neglect leads to declining health. Medicine and good care restore it. Stamina gates intense activities.
-
+- **Six core needs / stats + Learning & Speed**
+  - Hunger, Cleanliness (Toilet), Happiness (Play), Health, Energy (Sleep), Stamina, Learning, and Speed.
+- **Card-style action interface**
+  - Clear buttons for **Feed**, **Toilet**, **Play**, **Sleep**, **Medicine**, **Train**.
+- **Autonomous movement & tree climbing**
+  - Your pet walks around the garden scene, occasionally climbs and perches in the left-side tree, and reacts to low needs.
+- **Evolution line**
+  - Progress through **Puwamon** → **Luminamon** → **Solarmon** → **Aethelmon** as age, learning, and care actions grow.
+- **Training Lab minigames**
+  - **Rock / Paper / Scissors** and **Tic-Tac-Toe** to raise Learning.
+  - **Jump Obstacles** to raise Speed.
+- **Garden day/night scene**
+  - Real-time daytime tint with a smiling sun (07:00–19:00) and darker nighttime lighting.
 - **Save / Load**
-  Progress is automatically saved, and the main menu now includes explicit **Save Game** and **Load Game** buttons.
-
-- **Random pet thoughts**
-  Mimi occasionally pops up playful cloud bubbles such as “hmm feeling eepy!!”, “mhhm hungery :o”, and “let's play :-D”, with lines adapting to hunger, energy, and happiness.
-
-- **Optional notification sounds**  
-  Short beeps and status sounds for low needs, feeding, level-up style events, and sickness. (Generated or loaded from `assets/sounds/`)
-
-- **Clean modular architecture**  
-  Easy to extend with more Digimon forms, evolution, additional minigames, or even local LLM chat later.
-
-## Requirements
-
-- Python 3.9 or higher
-- Pygame 2.5+
-
-```bash
-pip install -r requirements.txt
-```
-
-## Quick Start (Windows)
-
-```bash
-git clone https://github.com/Mohamadx2/DigiAI-Pet.git
-cd DigiAI-Pet
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python main.py
-```
+  - Progress persists in browser `localStorage` via **Save**, **Save Game**, **Load Game**, and automatic save on exit/unload.
+- **Thought bubbles & Web Audio tones**
+  - Mood-reactive cloud bubbles and synthesized retro notification tones (toggle with `M`).
 
 ## Controls
 
-| Action              | How                          |
-|---------------------|------------------------------|
-| Feed                | Click Feed card              |
-| Clean / Toilet      | Click Toilet card            |
-| Play                | Click Play card              |
-| Sleep               | Click Sleep card             |
-| Give Medicine       | Click Medicine card          |
-| Train / Learn Game  | Click Train card             |
-| Main menu           | Opens at startup or press ESC |
-| Save / Load         | Main menu buttons            |
-| Quit                | Close window or Q            |
+| Action | How |
+| --- | --- |
+| Feed / Toilet / Play / Sleep / Medicine / Train | Click bottom action cards |
+| Main Menu (Pause / Save / Load / Resume) | Opens on launch, or press `ESC` / `Q` |
+| Save Progress | Click top-right **Save** or Main Menu **Save Game** |
+| Toggle Sound | Press `M` |
+| Rock / Paper / Scissors | Click buttons or press `R`, `P`, `S` |
+| Jump Obstacles | Click canvas or press `SPACE` |
 
-The pet will also show need icons above its head when a stat is critically low.
+## Development
 
-## Project Structure
-
-```
-DigiAI-Pet/
-├── main.py                 # Entry point
-├── requirements.txt
-├── README.md
-├── digipet/
-│   ├── __init__.py
-│   ├── config.py           # Constants, colors, timing
-│   ├── pet.py              # Pet class, stats, AI behavior, save/load
-│   ├── ui.py               # HUD, status bars, action cards
-│   ├── game.py             # Main loop, movement, events, minigames
-│   └── sounds.py           # Sound manager + simple tone generation
-└── assets/
-    ├── pet_background.png  # Uploaded garden scene
-    ├── puwamon.png         # Evolution stage assets
-    ├── luminamon.png
-    ├── solarmon.png
-    ├── aethelmon.png
-    └── sounds/             # Optional .wav files (auto-generated if missing)
+```bash
+npm install
+npm run dev
 ```
 
-## Extending the Project
-
-Ideas already prepared in the architecture:
-- Multiple Digimon species / sprites
-- Evolution stages based on care quality + age + training
-- More advanced minigames (pattern matching, simple battles)
-- System tray mode (minimize to tray)
-- Local LLM chat integration for true "AI pet" conversation
-
-## License
-
-MIT License – feel free to fork, modify, and share.
-
----
-
-Made for fun and learning. Care for your digital companion well.
+Runs on `http://0.0.0.0:3000`.
