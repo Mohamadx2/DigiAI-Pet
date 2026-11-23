@@ -7,7 +7,7 @@ and visual action feedback:
   - Toilet → short loading overlay with animated dots
   - Sleep → slowly growing "Zzzzzz" text
 Also shows current date and a persistent Exit button that saves.
-"""[cite: 4]
+"""
 
 from __future__ import annotations
 import math
@@ -24,14 +24,14 @@ from .config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, TITLE, BG_COLOR,
     BACKGROUND_FILE, CRITICAL, LOW, HUNGER_COLOR, CLEAN_COLOR, ENERGY_COLOR,
     EVOLUTION_LINE
-)[cite: 4]
-from .pet import Pet[cite: 4]
-from .ui import UI[cite: 4]
-from .sounds import SoundManager[cite: 4]
+)
+from .pet import Pet
+from .ui import UI
+from .sounds import SoundManager
 
 
 class FoodParticle:
-    """A simple circle that moves toward the pet (feeding animation)."""[cite: 4]
+    """A simple circle that moves toward the pet (feeding animation)."""
     def __init__(self, start: Tuple[float, float], target: Tuple[float, float]):
         self.x, self.y = start
         self.tx, self.ty = target
@@ -71,7 +71,7 @@ class FoodParticle:
 
 
 class ActionOverlay:
-    """Handles short visual sequences for Toilet and Sleep."""[cite: 4]
+    """Handles short visual sequences for Toilet and Sleep."""
     def __init__(self):
         self.active = False
         self.kind: Optional[str] = None   # "toilet" | "sleep"
@@ -138,7 +138,7 @@ class ActionOverlay:
 
 
 class Minigame:
-    """Simple reaction / timing game used by the Train action."""[cite: 4]
+    """Simple reaction / timing game used by the Train action."""
     def __init__(self):
         self.active = False
         self.phase = "wait"          # wait → show → result
@@ -187,7 +187,7 @@ class Minigame:
 
 
 class TrainingGame:
-    """Small self-contained games used to train intelligence or speed."""[cite: 4]
+    """Small self-contained games used to train intelligence or speed."""
     def __init__(self):
         self.active = False
         self.mode: Optional[str] = None
@@ -253,7 +253,6 @@ class TrainingGame:
         if not self.active or self.mode != "jump":
             return
         self.jump_timer = max(0.0, self.jump_timer - dt)
-        self.obstacle_x -= 330 * dt
         if self.obstacle_x < 100:
             if self.jump_timer <= 0:
                 self.success, self.message, self.active = False, "Bonk! Jump a little later.", False
@@ -263,6 +262,7 @@ class TrainingGame:
             self.message = f"Nice! Obstacles cleared: {self.score}"
             if self.score >= 3:
                 self.success, self.message, self.active = True, "Speed course cleared!", False
+        self.obstacle_x -= 330 * dt
 
 
 class Game:
@@ -359,7 +359,7 @@ class Game:
         return is_daytime
 
     def _draw_smiling_sun(self):
-        """Draw a small friendly sun above the pet during real-time daytime."""[cite: 4]
+        """Draw a small friendly sun above the pet during real-time daytime."""
         if not (7 <= datetime.now().hour < 19):
             return
         cx, cy = int(self.pet.x) + 48, max(155, int(self.pet.y) - 120)
@@ -373,7 +373,7 @@ class Game:
         pygame.draw.arc(self.screen, (74, 58, 54), (cx - 8, cy, 16, 12), 3.5, 5.9, 2)
 
     def _pick_thought(self) -> str:
-        """Choose an idea that reflects the pet's current mood or needs."""[cite: 4]
+        """Choose an idea that reflects the pet's current mood or needs."""
         state = self.pet.state
         if state.is_sleeping or state.energy < CRITICAL:
             pool = [
@@ -403,7 +403,7 @@ class Game:
         return random.choice(pool)
 
     def _update_thought(self, dt: float):
-        """Show short random ideas at varied intervals above the pet."""[cite: 4]
+        """Show short random ideas at varied intervals above the pet."""
         if self.thought_timer > 0.0:
             self.thought_timer = max(0.0, self.thought_timer - dt)
             return
@@ -421,7 +421,7 @@ class Game:
 
         Missing or invalid optional assets are non-fatal; the vector pet below
         remains available as a fallback for older or partial installations.
-        """[cite: 4]
+        """
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         sprites: Dict[int, pygame.Surface] = {}
         for stage in EVOLUTION_LINE:
@@ -483,14 +483,6 @@ class Game:
         # Shadow
         pygame.draw.ellipse(surface, (20, 22, 30), (x - 28, y + 28, 56, 14))
 
-        # Legs
-        if abs(self.pet.vx) > 0.1:
-            pygame.draw.rect(surface, (40, 40, 50), (x - 18, cy + 18, 10, 16), border_radius=3)
-            pygame.draw.rect(surface, (40, 40, 50), (x + 8, cy + 18, 10, 16), border_radius=3)
-        else:
-            pygame.draw.rect(surface, (40, 40, 50), (x - 16, cy + 20, 10, 14), border_radius=3)
-            pygame.draw.rect(surface, (40, 40, 50), (x + 6, cy + 20, 10, 14), border_radius=3)
-
         # Body
         body_rect = pygame.Rect(x - 26, cy - 20, 52, 48)
         pygame.draw.ellipse(surface, body, body_rect)
@@ -540,7 +532,7 @@ class Game:
     # Helpers
     # ------------------------------------------------------------------
     def _spawn_food(self):
-        """Create several food circles that fly toward the pet."""[cite: 4]
+        """Create several food circles that fly toward the pet."""
         for _ in range(7):
             side = random.choice(["top", "left", "right"])
             if side == "top":
@@ -548,100 +540,99 @@ class Game:
                 sy = random.uniform(40, 120)
             elif side == "left":
                 sx = random.uniform(20, 80)
-                sy = random.uniform(150, 400)
+                sy = random.uniform(150, WINDOW_HEIGHT - 150)
             else:
                 sx = random.uniform(WINDOW_WIDTH - 80, WINDOW_WIDTH - 20)
-                sy = random.uniform(150, 400)
-            self.food_particles.append(
-                FoodParticle((sx, sy), (self.pet.x, self.pet.y - 10))
-            )
+                sy = random.uniform(150, WINDOW_HEIGHT - 150)
+            self.food_particles.append(FoodParticle((sx, sy), (self.pet.x, self.pet.y - 10)))
 
     def _check_low_needs(self):
         now = time.time()
-        if now - self.last_low_warning < 12.0:
+        if now - self.last_low_warning < 8.0:
             return
         s = self.pet.state
-        if (s.hunger < CRITICAL or s.cleanliness < CRITICAL or
-                s.energy < CRITICAL or s.happiness < CRITICAL):
+        if s.hunger < CRITICAL or s.cleanliness < CRITICAL or s.happiness < CRITICAL or s.energy < CRITICAL:
             self.sounds.play("low")
-            self.pet.need_icon = "low"
-            self.pet.need_icon_timer = 3.0
             self.last_low_warning = now
-            self.ui.set_message("Your Digimon needs attention!")
+            if s.hunger < CRITICAL:
+                self.pet.need_icon = "feed"
+            elif s.cleanliness < CRITICAL:
+                self.pet.need_icon = "clean"
+            elif s.happiness < CRITICAL:
+                self.pet.need_icon = "play"
+            elif s.energy < CRITICAL:
+                self.pet.need_icon = "sleep"
+            self.pet.need_icon_timer = 3.0
 
-    def _handle_action(self, key: str):
-        self.sounds.play("click")
-        msg = ""
-
-        if key == "feed":
+    def _handle_action(self, action: str):
+        if action == "feed":
             msg = self.pet.feed()
-            if "Yummy" in msg or "absorbed" in msg:
-                self.sounds.play("feed")
+            self.ui.set_message(msg)
+            if "Yummy" in msg:
                 self._spawn_food()
-        elif key == "toilet":
+                self.sounds.play("feed")
+        elif action == "toilet":
             msg = self.pet.toilet()
-            if "clean" in msg.lower() or "polished" in msg.lower():
-                self.sounds.play("clean")
+            self.ui.set_message(msg)
+            if "clean" in msg.lower():
                 self.overlay.start_toilet()
-        elif key == "play":
+                self.sounds.play("clean")
+        elif action == "play":
             msg = self.pet.play()
-            if "fun" in msg.lower() or "wobble" in msg.lower():
+            self.ui.set_message(msg)
+            if "fun" in msg.lower():
                 self.sounds.play("play")
-        elif key == "sleep":
+        elif action == "sleep":
             msg = self.pet.sleep()
+            self.ui.set_message(msg)
             if "Zzz" in msg:
-                self.sounds.play("sleep")
                 self.overlay.start_sleep()
-        elif key == "medicine":
+                self.sounds.play("sleep")
+        elif action == "medicine":
             msg = self.pet.medicine()
+            self.ui.set_message(msg)
             if "better" in msg.lower():
                 self.sounds.play("med")
-        elif key == "train":
-            if (self.pet.can_act() and self.pet.state.stamina >= 20
-                    and self.pet.state.energy >= 25):
+        elif action == "train":
+            if self.pet.can_act():
                 self.training_menu = True
-                self.ui.set_message("Choose an intelligence or speed game")
-                return
             else:
-                msg = self.pet.train(success=False)
-
-        if msg:
-            self.ui.set_message(msg)
+                self.ui.set_message("Wait a moment...")
 
     def _finish_training(self):
-        """Apply the result of the selected training game."""[cite: 4]
         if self.training.mode == "jump":
-            msg = self.pet.train_speed(self.training.success)
+            msg = self.pet.train_speed(success=self.training.success)
         else:
-            msg = self.pet.train(self.training.success)
+            msg = self.pet.train(success=self.training.success)
         self.ui.set_message(msg)
         self.sounds.play("success" if self.training.success else "fail")
-        self.training.mode = None
+        self.training_menu = False
 
-    def _handle_training_key(self, key: int):
+    def _handle_training_key(self, key):
         if not self.training.active:
             return
         if self.training.mode == "rps":
-            choices = {pygame.K_r: "r", pygame.K_p: "p", pygame.K_s: "s"}
-            if key in choices:
-                self.training.choose_rps(choices[key])
+            mapping = {pygame.K_r: "r", pygame.K_p: "p", pygame.K_s: "s"}
+            if key in mapping:
+                self.training.choose_rps(mapping[key])
                 self._finish_training()
         elif self.training.mode == "jump" and key == pygame.K_SPACE:
             self.training.jump()
 
-    def _handle_training_click(self, pos: Tuple[int, int]):
+    def _handle_training_click(self, pos):
         if self.training_menu:
-            buttons = {
-                "rps": pygame.Rect(WINDOW_WIDTH // 2 - 260, WINDOW_HEIGHT // 2 - 95, 160, 60),
-                "ttt": pygame.Rect(WINDOW_WIDTH // 2 - 80, WINDOW_HEIGHT // 2 - 95, 160, 60),
-                "jump": pygame.Rect(WINDOW_WIDTH // 2 + 100, WINDOW_HEIGHT // 2 - 95, 160, 60),
-            }
-            for mode, rect in buttons.items():
+            panel = pygame.Rect(WINDOW_WIDTH // 2 - 330, WINDOW_HEIGHT // 2 - 180, 660, 360)
+            buttons = [
+                ("rps", pygame.Rect(panel.left + 70, panel.top + 135, 160, 60)),
+                ("ttt", pygame.Rect(panel.left + 250, panel.top + 135, 160, 60)),
+                ("jump", pygame.Rect(panel.left + 430, panel.top + 135, 160, 60)),
+            ]
+            for mode, rect in buttons:
                 if rect.collidepoint(pos):
-                    self.training_menu = False
                     self.training.start(mode)
+                    self.training_menu = False
                     return True
-            return True
+            return False
         if not self.training.active:
             return False
         if self.training.mode == "rps":
@@ -702,7 +693,8 @@ class Game:
                 rect = pygame.Rect(panel.centerx + x, panel.top + 175, 120, 54)
                 pygame.draw.rect(self.screen, (52, 76, 106), rect, border_radius=10)
                 pygame.draw.rect(self.screen, (130, 210, 255), rect, 2, border_radius=10)
-                self.screen.blit(self.ui.font_sm.render(f"{label} ({key})", True, (240, 248, 255)), self.ui.font_sm.render(f"{label} ({key})", True, (240, 248, 255)).get_rect(center=rect.center))
+                rendered = self.ui.font_sm.render(f"{label} ({key})", True, (240, 248, 255))
+                self.screen.blit(rendered, rendered.get_rect(center=rect.center))
         elif self.training.mode == "ttt":
             rect = pygame.Rect(panel.centerx - 135, panel.top + 115, 270, 270)
             for i, mark in enumerate(self.training.board):
@@ -713,14 +705,13 @@ class Game:
                     rendered = self.font_lg.render(mark, True, (255, 231, 143) if mark == "X" else (181, 220, 255))
                     self.screen.blit(rendered, rendered.get_rect(center=cell.center))
         elif self.training.mode == "jump":
-            ground_y = panel.top + 250
-            pygame.draw.line(self.screen, (170, 235, 170), (panel.left + 55, ground_y), (panel.right - 55, ground_y), 5)
+            ground_y = panel.centery + 40
+            pygame.draw.rect(self.screen, (80, 120, 90), (panel.left + 40, ground_y, panel.width - 80, 18))
             player_y = ground_y - 28 - (38 if self.training.jump_timer > 0 else 0)
-            pygame.draw.rect(self.screen, (255, 214, 95), (panel.left + 90, player_y, 28, 28), border_radius=7)
-            obstacle = pygame.Rect(panel.left + int(self.training.obstacle_x * 0.55), ground_y - 32, 25, 32)
-            pygame.draw.rect(self.screen, (255, 120, 105), obstacle, border_radius=5)
-            score = self.ui.font_sm.render(f"Cleared: {self.training.score}/3", True, (225, 240, 255))
-            self.screen.blit(score, (panel.left + 55, ground_y + 18))
+            pygame.draw.circle(self.screen, (255, 200, 80), (panel.left + 120, player_y), 18)
+            ox = int(self.training.obstacle_x)
+            if panel.left + 40 < ox < panel.right - 40:
+                pygame.draw.rect(self.screen, (200, 80, 80), (ox, ground_y - 40, 28, 40))
 
     def _finish_minigame(self):
         success = self.minigame.success
@@ -733,7 +724,7 @@ class Game:
             self.sounds.play("fail")
 
     def _safe_exit(self):
-        """Save and quit cleanly."""[cite: 4]
+        """Save and quit cleanly."""
         self.pet.save()
         if pygame.mixer.get_init():
             pygame.mixer.music.stop()
@@ -785,58 +776,59 @@ class Game:
                         elif action == "menu_save":
                             self.pet.save()
                             self.ui.set_message("Game saved!")
-                            self.sounds.play("click")
                         elif action == "menu_load":
                             self.pet = Pet.load()
-                            self.thought_text = ""
-                            self.thought_timer = 0.0
-                            self.next_thought_timer = 1.0
                             self.ui.set_message("Game loaded!")
-                            self.sounds.play("click")
-                        elif action and not self.menu_open and not self.overlay.active:
+                        elif action and not self.menu_open:
                             self._handle_action(action)
 
+            if self.menu_open:
+                # Keep drawing the menu but pause simulation
+                self.ui.handle_hover(pygame.mouse.get_pos())
+                self._draw_scene()
+                pygame.draw.rect(self.screen, (40, 48, 65),
+                                 (0, WINDOW_HEIGHT - 148, WINDOW_WIDTH, 148))
+                self._draw_pet(self.screen)
+                self.ui.draw_bars(self.screen, self.pet.get_status_summary())
+                self.ui.draw_date(self.screen)
+                self.ui.draw_exit_button(self.screen)
+                self.ui.draw_cards(self.screen)
+                self.ui.draw_main_menu(self.screen)
+                pygame.display.flip()
+                continue
+
             # ---------- Update ----------
-            mouse = pygame.mouse.get_pos()
-            self.ui.handle_hover(mouse)
-            self.ui.update(dt)
-
-            if not self.menu_open:
+            if not self.overlay.active and not self.training.active and not self.minigame.active:
                 self.pet.update(dt)
-                self.minigame.update(dt)
-                self.training.update(dt)
-                if self.training.mode and not self.training.active:
-                    self._finish_training()
-                self.overlay.update(dt)
                 self._update_thought(dt)
-
-                # Update food particles
-                for p in self.food_particles[:]:
-                    p.update(dt)
-                    if not p.alive:
-                        self.food_particles.remove(p)
-
-                # Finish minigame on timeout
-                if (not self.minigame.active and self.minigame.phase == "result"
-                        and self.minigame.message.startswith("Too")):
-                    self._finish_minigame()
-                    self.minigame.message = ""
-
                 self._check_low_needs()
 
-                # Evolution & Rebirth loop feedback
-                evo = self.pet.consume_evolution_event()
-                if evo:
-                    self.ui.set_message(f"Evolved into {evo['name']}!")
-                    self.sounds.play("learn")
+            self.overlay.update(dt)
+            self.minigame.update(dt)
+            self.training.update(dt)
+            self.ui.update(dt)
 
-                if hasattr(self.pet, "consume_rebirth_event"):
-                    rebirth = self.pet.consume_rebirth_event()
-                    if rebirth:
-                        self.ui.set_message(
-                            f"Reborn as {rebirth['new_name']} (Gen {rebirth['generation']})!"
-                        )
-                        self.sounds.play("success")
+            # Food particles
+            still_alive = []
+            for p in self.food_particles:
+                p.update(dt)
+                if p.alive:
+                    still_alive.append(p)
+            self.food_particles = still_alive
+
+            # Evolution / rebirth feedback
+            evo = self.pet.consume_evolution_event()
+            if evo:
+                self.ui.set_message(f"Evolved into {evo['name']}!")
+                self.sounds.play("learn")
+
+            if hasattr(self.pet, "consume_rebirth_event"):
+                rebirth = self.pet.consume_rebirth_event()
+                if rebirth:
+                    self.ui.set_message(
+                        f"Reborn as {rebirth['new_name']} (Gen {rebirth['generation']})!"
+                    )
+                    self.sounds.play("success")
 
             # ---------- Draw ----------
             self._draw_scene()
