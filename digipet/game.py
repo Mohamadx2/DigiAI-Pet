@@ -10,16 +10,17 @@ Also shows current date and a persistent Exit button that saves.
 
 from __future__ import annotations
 import math
+import os
 import random
 import sys
 import time
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pygame
 
 from .config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, TITLE, BG_COLOR,
-    CRITICAL, LOW, HUNGER_COLOR, CLEAN_COLOR, ENERGY_COLOR
+    CRITICAL, LOW, HUNGER_COLOR, CLEAN_COLOR, ENERGY_COLOR, EVOLUTION_LINE
 )
 from .pet import Pet
 from .ui import UI
@@ -189,7 +190,7 @@ class Game:
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         self.clock = pygame.time.Clock()
         self.running = True
-        self.menu_open = False
+        self.menu_open = True
 
         self.pet = Pet.load()
         self.ui = UI()
@@ -197,15 +198,100 @@ class Game:
         self.minigame = Minigame()
         self.overlay = ActionOverlay()
         self.food_particles: List[FoodParticle] = []
+        self.stage_sprites: Dict[int, pygame.Surface] = self._load_stage_sprites()
+        self.thought_text = ""
+        self.thought_timer = 0.0
+        self.next_thought_timer = 1.5
 
         self.last_low_warning = 0.0
         self.font_lg = pygame.font.SysFont("Segoe UI", 36, bold=True)
         self.font_md = pygame.font.SysFont("Segoe UI", 22)
 
+    def _pick_thought(self) -> str:
+        """Choose an idea that reflects the pet's current mood or needs."""
+        state = self.pet.state
+        if state.is_sleeping or state.energy < CRITICAL:
+            pool = [
+                "hmm feeling eepy!!", "five more minutes... zzz",
+                "my paws need a tiny nap", "dreaming of fluffy clouds",
+            ]
+        elif state.hunger < CRITICAL:
+            pool = [
+                "mhhm hungery :o", "is that a snack I smell?",
+                "my tummy is doing a drum solo", "one tiny treat, please?",
+            ]
+        elif state.happiness < LOW:
+            pool = [
+                "let's play :-D", "could use a cuddle...",
+                "where did all the fun go?", "boop my nose?",
+            ]
+        else:
+            pool = [
+                "let's play :-D", "I wonder what's over there?",
+                "sparkles!! so many sparkles!!", "I am a very clever little pet",
+                "zoomies loading...", "did I just see a butterfly?",
+                "my wings feel extra floofy today", "boop!",
+                "I shall conquer the sofa", "being cute is hard work",
+                "I have important pet business", "what if the moon is pudding?",
+                "*happy tiny noises*",
+            ]
+        return random.choice(pool)
+
+    def _update_thought(self, dt: float):
+        """Show short random ideas at varied intervals above the pet."""
+        if self.thought_timer > 0.0:
+            self.thought_timer = max(0.0, self.thought_timer - dt)
+            return
+        self.next_thought_timer = max(0.0, self.next_thought_timer - dt)
+        if self.next_thought_timer <= 0.0:
+            self.thought_text = self._pick_thought()
+            self.thought_timer = random.uniform(3.2, 5.0)
+            self.next_thought_timer = random.uniform(4.0, 8.0)
+
     # ------------------------------------------------------------------
-    # Procedural pet drawing (simple Digimon-like silhouette)
+    # Pet assets and rendering
     # ------------------------------------------------------------------
+    def _load_stage_sprites(self) -> Dict[int, pygame.Surface]:
+        """Load evolution sprites without depending on the process cwd.
+
+        Missing or invalid optional assets are non-fatal; the vector pet below
+        remains available as a fallback for older or partial installations.
+        """
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        sprites: Dict[int, pygame.Surface] = {}
+        for stage in EVOLUTION_LINE:
+            path = os.path.join(project_root, stage.get("sprite", ""))
+            if not os.path.isfile(path):
+                continue
+            try:
+                sprite = pygame.image.load(path).convert_alpha()
+                max_size = 150
+                if sprite.get_width() > max_size or sprite.get_height() > max_size:
+                    scale = min(max_size / sprite.get_width(), max_size / sprite.get_height())
+                    size = (
+                        max(1, int(sprite.get_width() * scale)),
+                        max(1, int(sprite.get_height() * scale)),
+                    )
+                    sprite = pygame.transform.smoothscale(sprite, size)
+                sprites[stage["stage"]] = sprite
+            except (pygame.error, OSError):
+                continue
+        return sprites
+
+    def _draw_stage_sprite(self, surface: pygame.Surface) -> bool:
+        sprite = self.stage_sprites.get(self.pet.state.evolution_stage)
+        if sprite is None:
+            return False
+        if not self.pet.facing_right:
+            sprite = pygame.transform.flip(sprite, True, False)
+        rect = sprite.get_rect(center=(int(self.pet.x), int(self.pet.y - 8)))
+        surface.blit(sprite, rect)
+        return True
+
+    # Procedural fallback (simple Digimon-like silhouette)
     def _draw_pet(self, surface: pygame.Surface):
+        if self._draw_stage_sprite(surface):
+            return
         x, y = int(self.pet.x), int(self.pet.y)
         mood = self.pet.state.mood
         frame = self.pet.frame
@@ -413,6 +499,9 @@ class Game:
                             self.sounds.play("click")
                         elif action == "menu_load":
                             self.pet = Pet.load()
+                            self.thought_text = ""
+                            self.thought_timer = 0.0
+                            self.next_thought_timer = 1.0
                             self.ui.set_message("Game loaded!")
                             self.sounds.play("click")
                         elif action and not self.menu_open and not self.overlay.active:
@@ -427,6 +516,7 @@ class Game:
                 self.pet.update(dt)
                 self.minigame.update(dt)
                 self.overlay.update(dt)
+                self._update_thought(dt)
 
                 # Update food particles
                 for p in self.food_particles[:]:
@@ -454,6 +544,7 @@ class Game:
                              (0, WINDOW_HEIGHT - 150, WINDOW_WIDTH, 150))
 
             self._draw_pet(self.screen)
+            self.ui.draw_thought_bubble(self.screen, self.pet.x, self.pet.y, self.thought_text)
 
             # Food particles (drawn on top of pet)
             for p in self.food_particles:

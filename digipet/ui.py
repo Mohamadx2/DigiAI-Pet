@@ -247,7 +247,7 @@ class UI:
         hint = self.font_sm.render("Your pet is paused while this menu is open", True, (181, 202, 224))
         surface.blit(hint, hint.get_rect(center=(panel.centerx, 143)))
 
-        labels = {"save": "Save Game", "load": "Load Game", "resume": "Resume", "quit": "Quit"}
+        labels = {"save": "Save Game", "load": "Load Game", "resume": "Resume", "quit": "Exit Game"}
         colors = {"save": (110, 215, 170), "load": (120, 190, 255), "resume": (255, 220, 100), "quit": (255, 130, 145)}
         for key, rect in self.menu_button_rects.items():
             color = colors[key]
