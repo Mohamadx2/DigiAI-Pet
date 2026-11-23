@@ -1,12 +1,13 @@
 """
 Main game loop for DigiAI-Pet.
 Includes procedural pet rendering, reaction minigame,
+MIDI background music support, rebirth loop feedback,
 and visual action feedback:
   - Feed  → food circles that fly toward the pet
   - Toilet → short loading overlay with animated dots
   - Sleep → slowly growing "Zzzzzz" text
 Also shows current date and a persistent Exit button that saves.
-"""
+"""[cite: 4]
 
 from __future__ import annotations
 import math
@@ -23,14 +24,14 @@ from .config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, TITLE, BG_COLOR,
     BACKGROUND_FILE, CRITICAL, LOW, HUNGER_COLOR, CLEAN_COLOR, ENERGY_COLOR,
     EVOLUTION_LINE
-)
-from .pet import Pet
-from .ui import UI
-from .sounds import SoundManager
+)[cite: 4]
+from .pet import Pet[cite: 4]
+from .ui import UI[cite: 4]
+from .sounds import SoundManager[cite: 4]
 
 
 class FoodParticle:
-    """A simple circle that moves toward the pet (feeding animation)."""
+    """A simple circle that moves toward the pet (feeding animation)."""[cite: 4]
     def __init__(self, start: Tuple[float, float], target: Tuple[float, float]):
         self.x, self.y = start
         self.tx, self.ty = target
@@ -70,7 +71,7 @@ class FoodParticle:
 
 
 class ActionOverlay:
-    """Handles short visual sequences for Toilet and Sleep."""
+    """Handles short visual sequences for Toilet and Sleep."""[cite: 4]
     def __init__(self):
         self.active = False
         self.kind: Optional[str] = None   # "toilet" | "sleep"
@@ -137,7 +138,7 @@ class ActionOverlay:
 
 
 class Minigame:
-    """Simple reaction / timing game used by the Train action."""
+    """Simple reaction / timing game used by the Train action."""[cite: 4]
     def __init__(self):
         self.active = False
         self.phase = "wait"          # wait → show → result
@@ -186,7 +187,7 @@ class Minigame:
 
 
 class TrainingGame:
-    """Small self-contained games used to train intelligence or speed."""
+    """Small self-contained games used to train intelligence or speed."""[cite: 4]
     def __init__(self):
         self.active = False
         self.mode: Optional[str] = None
@@ -276,6 +277,9 @@ class Game:
         self.pet = Pet.load()
         self.ui = UI()
         self.sounds = SoundManager()
+        self.midi_playing = False
+        self._start_midi_music()
+
         self.minigame = Minigame()
         self.training = TrainingGame()
         self.training_menu = False
@@ -290,6 +294,45 @@ class Game:
         self.last_low_warning = 0.0
         self.font_lg = pygame.font.SysFont("Segoe UI", 36, bold=True)
         self.font_md = pygame.font.SysFont("Segoe UI", 22)
+
+    # ------------------------------------------------------------------
+    # MIDI / Retro Audio Helpers
+    # ------------------------------------------------------------------
+    def _find_midi_file(self) -> Optional[str]:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        assets_dir = os.path.join(project_root, "assets")
+        preferred = os.path.join(assets_dir, "pumkinmon_theme.mid")
+        if os.path.isfile(preferred):
+            return preferred
+        if os.path.isdir(assets_dir):
+            for fname in sorted(os.listdir(assets_dir)):
+                if fname.lower().endswith((".mid", ".midi")):
+                    return os.path.join(assets_dir, fname)
+        return None
+
+    def _start_midi_music(self, volume: float = 0.22):
+        if not pygame.mixer.get_init():
+            return
+        midi_path = self._find_midi_file()
+        if not midi_path:
+            return
+        try:
+            pygame.mixer.music.load(midi_path)
+            pygame.mixer.music.set_volume(volume)
+            pygame.mixer.music.play(loops=-1)
+            self.midi_playing = True
+        except pygame.error:
+            self.midi_playing = False
+
+    def _toggle_midi(self) -> str:
+        if not pygame.mixer.get_init():
+            return "Audio mixer unavailable"
+        if self.midi_playing:
+            pygame.mixer.music.stop()
+            self.midi_playing = False
+            return "MIDI Music OFF"
+        self._start_midi_music()
+        return "MIDI Music ON" if self.midi_playing else "No .mid file in assets/"
 
     def _load_background(self) -> Optional[pygame.Surface]:
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -316,7 +359,7 @@ class Game:
         return is_daytime
 
     def _draw_smiling_sun(self):
-        """Draw a small friendly sun above the pet during real-time daytime."""
+        """Draw a small friendly sun above the pet during real-time daytime."""[cite: 4]
         if not (7 <= datetime.now().hour < 19):
             return
         cx, cy = int(self.pet.x) + 48, max(155, int(self.pet.y) - 120)
@@ -330,7 +373,7 @@ class Game:
         pygame.draw.arc(self.screen, (74, 58, 54), (cx - 8, cy, 16, 12), 3.5, 5.9, 2)
 
     def _pick_thought(self) -> str:
-        """Choose an idea that reflects the pet's current mood or needs."""
+        """Choose an idea that reflects the pet's current mood or needs."""[cite: 4]
         state = self.pet.state
         if state.is_sleeping or state.energy < CRITICAL:
             pool = [
@@ -360,7 +403,7 @@ class Game:
         return random.choice(pool)
 
     def _update_thought(self, dt: float):
-        """Show short random ideas at varied intervals above the pet."""
+        """Show short random ideas at varied intervals above the pet."""[cite: 4]
         if self.thought_timer > 0.0:
             self.thought_timer = max(0.0, self.thought_timer - dt)
             return
@@ -378,7 +421,7 @@ class Game:
 
         Missing or invalid optional assets are non-fatal; the vector pet below
         remains available as a fallback for older or partial installations.
-        """
+        """[cite: 4]
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         sprites: Dict[int, pygame.Surface] = {}
         for stage in EVOLUTION_LINE:
@@ -497,9 +540,8 @@ class Game:
     # Helpers
     # ------------------------------------------------------------------
     def _spawn_food(self):
-        """Create several food circles that fly toward the pet."""
+        """Create several food circles that fly toward the pet."""[cite: 4]
         for _ in range(7):
-            # Start from random positions around the edges / upper area
             side = random.choice(["top", "left", "right"])
             if side == "top":
                 sx = random.uniform(80, WINDOW_WIDTH - 80)
@@ -533,17 +575,17 @@ class Game:
 
         if key == "feed":
             msg = self.pet.feed()
-            if "Yummy" in msg:
+            if "Yummy" in msg or "absorbed" in msg:
                 self.sounds.play("feed")
                 self._spawn_food()
         elif key == "toilet":
             msg = self.pet.toilet()
-            if "clean" in msg.lower():
+            if "clean" in msg.lower() or "polished" in msg.lower():
                 self.sounds.play("clean")
                 self.overlay.start_toilet()
         elif key == "play":
             msg = self.pet.play()
-            if "fun" in msg.lower():
+            if "fun" in msg.lower() or "wobble" in msg.lower():
                 self.sounds.play("play")
         elif key == "sleep":
             msg = self.pet.sleep()
@@ -567,7 +609,7 @@ class Game:
             self.ui.set_message(msg)
 
     def _finish_training(self):
-        """Apply the result of the selected training game."""
+        """Apply the result of the selected training game."""[cite: 4]
         if self.training.mode == "jump":
             msg = self.pet.train_speed(self.training.success)
         else:
@@ -691,9 +733,12 @@ class Game:
             self.sounds.play("fail")
 
     def _safe_exit(self):
-        """Save and quit cleanly."""
+        """Save and quit cleanly."""[cite: 4]
         self.pet.save()
-        self.running = False
+        if pygame.mixer.get_init():
+            pygame.mixer.music.stop()
+        pygame.quit()
+        sys.exit()
 
     # ------------------------------------------------------------------
     # Main loop
@@ -719,6 +764,8 @@ class Game:
                     elif event.key == pygame.K_m:
                         enabled = self.sounds.toggle()
                         self.ui.set_message("Sound " + ("ON" if enabled else "OFF"))
+                    elif event.key == pygame.K_F5:
+                        self.ui.set_message(self._toggle_midi())
                     elif event.key == pygame.K_SPACE:
                         if self.minigame.active:
                             self.minigame.react()
@@ -777,11 +824,19 @@ class Game:
 
                 self._check_low_needs()
 
-                # Evolution feedback
+                # Evolution & Rebirth loop feedback
                 evo = self.pet.consume_evolution_event()
                 if evo:
                     self.ui.set_message(f"Evolved into {evo['name']}!")
                     self.sounds.play("learn")
+
+                if hasattr(self.pet, "consume_rebirth_event"):
+                    rebirth = self.pet.consume_rebirth_event()
+                    if rebirth:
+                        self.ui.set_message(
+                            f"Reborn as {rebirth['new_name']} (Gen {rebirth['generation']})!"
+                        )
+                        self.sounds.play("success")
 
             # ---------- Draw ----------
             self._draw_scene()
