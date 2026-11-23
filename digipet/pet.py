@@ -6,6 +6,7 @@ Pet class – stats, needs, simple AI behavior, learning, evolution, save/load.
 
 from __future__ import annotations
 import json
+import math
 import os
 import random
 import time
@@ -59,6 +60,13 @@ class Pet:
         self.need_icon: Optional[str] = None
         self.need_icon_timer = 0.0
         self._pending_evolution: Optional[dict] = None
+        # Climbable tree interaction
+        self.is_climbing = False
+        self.climb_timer = 0.0
+        self.base_y = 320.0  # ground level when not climbing
+        self.tree_x = 180.0
+        self.tree_base_y = 520.0
+        self.tree_top_y = 280.0
 
     # ------------------------------------------------------------------
     # Evolution helpers
@@ -190,13 +198,42 @@ class Pet:
 
         if self.state.is_sleeping or self.state.is_sick:
             self.vx = self.vy = 0.0
+            self.is_climbing = False
             return
 
-        # Occasionally pick a new target
+        # Climbing state: stay near tree top for a while then come down
+        if self.is_climbing:
+            self.climb_timer -= dt
+            self.vx = self.vy = 0.0
+            # Gently bob while perched
+            self.y = self.tree_top_y + math.sin(self.climb_timer * 2.0) * 4
+            if self.climb_timer <= 0:
+                self.is_climbing = False
+                self.target_y = self.tree_base_y - 40
+                self.target_x = self.tree_x + random.uniform(-30, 30)
+            return
+
+        # Chance to decide to climb the tree when nearby
+        dist_to_tree = ((self.x - self.tree_x) ** 2 + (self.y - self.tree_base_y) ** 2) ** 0.5
+        if dist_to_tree < 90 and random.random() < 0.003 and not self.is_climbing:
+            self.is_climbing = True
+            self.climb_timer = random.uniform(6.0, 14.0)
+            self.target_x = self.tree_x
+            self.target_y = self.tree_top_y
+            self.need_icon = "play"
+            self.need_icon_timer = 2.0
+            return
+
+        # Occasionally pick a new target (sometimes the tree)
         if self.target_x is None or random.random() < WALK_CHANCE:
-            margin = 80
-            self.target_x = random.uniform(margin, WINDOW_WIDTH - margin)
-            self.target_y = random.uniform(180, WINDOW_HEIGHT - 140)
+            if random.random() < 0.18:
+                # Head toward the tree
+                self.target_x = self.tree_x + random.uniform(-20, 20)
+                self.target_y = self.tree_base_y - 30
+            else:
+                margin = 80
+                self.target_x = random.uniform(margin, WINDOW_WIDTH - margin)
+                self.target_y = random.uniform(200, WINDOW_HEIGHT - 160)
 
         if self.target_x is not None:
             dx = self.target_x - self.x

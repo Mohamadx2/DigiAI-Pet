@@ -52,9 +52,11 @@ class UI:
         }
         self.menu_hovered: Optional[str] = None
 
-        # Persistent Exit button (top-right)
+        # Persistent Exit + Save Progress buttons (top-right)
         self.exit_rect = pygame.Rect(WINDOW_WIDTH - 110, 14, 90, 36)
         self.exit_hovered = False
+        self.save_rect = pygame.Rect(WINDOW_WIDTH - 220, 14, 100, 36)
+        self.save_hovered = False
 
         # Action cards at the bottom
         card_w, card_h = 130, 58
@@ -90,11 +92,14 @@ class UI:
             None,
         )
         self.exit_hovered = self.exit_rect.collidepoint(mouse_pos)
+        self.save_hovered = self.save_rect.collidepoint(mouse_pos)
 
     def handle_click(self, mouse_pos: Tuple[int, int], menu_open: bool = False) -> Optional[str]:
-        # Exit button always active (even over menu for safety)
+        # Exit and Save buttons always active
         if self.exit_rect.collidepoint(mouse_pos):
             return "exit"
+        if self.save_rect.collidepoint(mouse_pos):
+            return "save_progress"
         if menu_open:
             for key, rect in self.menu_button_rects.items():
                 if rect.collidepoint(mouse_pos):
@@ -151,8 +156,8 @@ class UI:
         date_str = now.strftime("%Y-%m-%d")
         time_str = now.strftime("%H:%M")
         txt = self.font_xs.render(f"{date_str}  {time_str}", True, (180, 200, 230))
-        # Place just left of the Exit button
-        surface.blit(txt, (WINDOW_WIDTH - 230, 22))
+        # Place left of the Save button
+        surface.blit(txt, (WINDOW_WIDTH - 340, 22))
 
     def draw_exit_button(self, surface: pygame.Surface):
         color = (255, 120, 130) if self.exit_hovered else (70, 55, 70)
@@ -161,6 +166,14 @@ class UI:
         pygame.draw.rect(surface, border, self.exit_rect, width=2, border_radius=8)
         label = self.font_sm.render("Exit", True, TEXT_COLOR)
         surface.blit(label, label.get_rect(center=self.exit_rect.center))
+
+    def draw_save_button(self, surface: pygame.Surface):
+        color = (80, 160, 120) if self.save_hovered else (45, 70, 60)
+        border = (140, 220, 170) if self.save_hovered else (90, 160, 120)
+        pygame.draw.rect(surface, color, self.save_rect, border_radius=8)
+        pygame.draw.rect(surface, border, self.save_rect, width=2, border_radius=8)
+        label = self.font_sm.render("Save", True, TEXT_COLOR)
+        surface.blit(label, label.get_rect(center=self.save_rect.center))
 
     def draw_cards(self, surface: pygame.Surface):
         for card in self.cards:

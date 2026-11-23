@@ -356,7 +356,30 @@ class Game:
         else:
             shade.fill((10, 22, 62, 125))
         self.screen.blit(shade, (0, 0))
+        # Climbable tree (simple stylized tree the pet can perch on)
+        self._draw_tree()
         return is_daytime
+
+    def _draw_tree(self):
+        """Draw a climbable tree on the left side of the garden."""
+        tx = 180
+        base_y = 560
+        # Trunk
+        trunk_color = (92, 64, 40)
+        pygame.draw.rect(self.screen, trunk_color, (tx - 14, base_y - 160, 28, 160), border_radius=4)
+        pygame.draw.rect(self.screen, (70, 48, 30), (tx - 14, base_y - 160, 28, 160), width=2, border_radius=4)
+        # Foliage layers
+        foliage = [
+            ((tx, base_y - 200), 70, (40, 110, 55)),
+            ((tx - 25, base_y - 175), 55, (45, 130, 60)),
+            ((tx + 25, base_y - 175), 55, (35, 100, 50)),
+            ((tx, base_y - 230), 48, (50, 140, 65)),
+        ]
+        for (cx, cy), r, col in foliage:
+            pygame.draw.circle(self.screen, col, (cx, cy), r)
+            pygame.draw.circle(self.screen, (30, 80, 40), (cx, cy), r, width=2)
+        # Small highlight
+        pygame.draw.circle(self.screen, (90, 180, 100), (tx - 18, base_y - 215), 12)
 
     def _draw_smiling_sun(self):
         """Draw a small friendly sun above the pet during real-time daytime."""
@@ -773,9 +796,9 @@ class Game:
                             self._safe_exit()
                         elif action == "menu_resume":
                             self.menu_open = False
-                        elif action == "menu_save":
+                        elif action == "menu_save" or action == "save_progress":
                             self.pet.save()
-                            self.ui.set_message("Game saved!")
+                            self.ui.set_message("Progress saved!")
                         elif action == "menu_load":
                             self.pet = Pet.load()
                             self.ui.set_message("Game loaded!")
@@ -791,6 +814,7 @@ class Game:
                 self._draw_pet(self.screen)
                 self.ui.draw_bars(self.screen, self.pet.get_status_summary())
                 self.ui.draw_date(self.screen)
+                self.ui.draw_save_button(self.screen)
                 self.ui.draw_exit_button(self.screen)
                 self.ui.draw_cards(self.screen)
                 self.ui.draw_main_menu(self.screen)
@@ -846,6 +870,7 @@ class Game:
             self.ui.draw_need_icon(self.screen, self.pet.x, self.pet.y, self.pet.need_icon)
             self.ui.draw_bars(self.screen, self.pet.get_status_summary())
             self.ui.draw_date(self.screen)
+            self.ui.draw_save_button(self.screen)
             self.ui.draw_exit_button(self.screen)
             self.ui.draw_cards(self.screen)
             self.ui.draw_message(self.screen)

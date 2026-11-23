@@ -22,13 +22,15 @@ STAMINA_COLOR = (180, 140, 255)
 LEARN_COLOR = (140, 255, 200)
 
 # Pet stats decay rates (per second at normal speed)
+# Tuned for realistic life-like pacing:
+# Hunger ~2.5 hours from full to empty, toilet ~3-4h, energy slower, etc.
 DECAY = {
-    "hunger": 0.8,
-    "cleanliness": 0.6,
-    "happiness": 0.7,
-    "energy": 0.5,
-    "health": 0.15,   # slower, rises when neglected
-    "stamina": 0.18,  # significantly slower drain (was 0.4)
+    "hunger": 0.011,       # ~2.5 hours full → empty (100 / 9000s)
+    "cleanliness": 0.007,  # ~4 hours
+    "happiness": 0.004,    # declines slowly without play
+    "energy": 0.0035,      # drops over a long active day
+    "health": 0.04,        # only when neglected / sick path
+    "stamina": 0.05,       # recovers with rest / sleep
 }
 
 # Thresholds
