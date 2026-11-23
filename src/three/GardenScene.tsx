@@ -1130,6 +1130,7 @@ export function GardenScene({
         spriteMat.map = desiredTex;
         spriteMat.needsUpdate = true;
       }
+      petSpriteMesh.visible = Boolean(spriteMat.map);
 
       const stageScale =
         pet.state.life_phase === "egg"

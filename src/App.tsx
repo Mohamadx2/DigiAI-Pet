@@ -272,7 +272,7 @@ export function App() {
     soundsRef.current.unlock();
     soundsRef.current.play("click");
     const order: Array<"auto" | WeatherKind> = ["auto", "sunny", "rain", "snow"];
-    const nextMode = order[(order.indexOf(weatherMode) + 1) % order.length];
+    const nextMode = order[(order.indexOf(weatherRef.current.mode) + 1) % order.length];
     setWeatherMode(nextMode);
     weatherRef.current.mode = nextMode;
 
@@ -651,7 +651,7 @@ export function App() {
 
       {/* Egg Hatching Banner (Born Egg -> Hatch) */}
       {s.life_phase === "egg" && (
-        <div className="fixed bottom-28 left-1/2 z-20 flex w-[min(420px,92vw)] -translate-x-1/2 flex-col items-center gap-3 rounded-2xl border border-amber-300/40 bg-[#162038]/95 p-4 text-center shadow-2xl">
+        <div className="fixed bottom-36 left-1/2 z-20 flex w-[min(420px,92vw)] -translate-x-1/2 flex-col items-center gap-3 rounded-2xl border border-amber-300/40 bg-[#162038]/95 p-4 text-center shadow-2xl">
           <div className="text-sm font-semibold text-amber-200">
             Born Egg · Warm the Digi-Egg to Hatch!
           </div>
