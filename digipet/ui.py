@@ -1,8 +1,10 @@
 """
-UI helpers: status bars, action cards, need icons, text rendering.
+UI helpers: status bars, action cards, need icons, text rendering,
+date display and Exit button.
 """
 
 from __future__ import annotations
+from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 
 import pygame
@@ -50,6 +52,10 @@ class UI:
         }
         self.menu_hovered: Optional[str] = None
 
+        # Persistent Exit button (top-right)
+        self.exit_rect = pygame.Rect(WINDOW_WIDTH - 110, 14, 90, 36)
+        self.exit_hovered = False
+
         # Action cards at the bottom
         card_w, card_h = 130, 58
         gap = 14
@@ -83,8 +89,12 @@ class UI:
             (key for key, rect in self.menu_button_rects.items() if rect.collidepoint(mouse_pos)),
             None,
         )
+        self.exit_hovered = self.exit_rect.collidepoint(mouse_pos)
 
     def handle_click(self, mouse_pos: Tuple[int, int], menu_open: bool = False) -> Optional[str]:
+        # Exit button always active (even over menu for safety)
+        if self.exit_rect.collidepoint(mouse_pos):
+            return "exit"
         if menu_open:
             for key, rect in self.menu_button_rects.items():
                 if rect.collidepoint(mouse_pos):
@@ -141,6 +151,23 @@ class UI:
             # Value text
             val_txt = self.font_xs.render(f"{int(value)}", True, TEXT_COLOR)
             surface.blit(val_txt, (x + bar_w + 6, y + 16))
+
+    def draw_date(self, surface: pygame.Surface):
+        """Show current date + time in the top-right area of the status panel."""
+        now = datetime.now()
+        date_str = now.strftime("%Y-%m-%d")
+        time_str = now.strftime("%H:%M")
+        txt = self.font_xs.render(f"{date_str}  {time_str}", True, (180, 200, 230))
+        # Place just left of the Exit button
+        surface.blit(txt, (WINDOW_WIDTH - 230, 22))
+
+    def draw_exit_button(self, surface: pygame.Surface):
+        color = (255, 120, 130) if self.exit_hovered else (70, 55, 70)
+        border = (255, 160, 170) if self.exit_hovered else (200, 100, 110)
+        pygame.draw.rect(surface, color, self.exit_rect, border_radius=8)
+        pygame.draw.rect(surface, border, self.exit_rect, width=2, border_radius=8)
+        label = self.font_sm.render("Exit", True, TEXT_COLOR)
+        surface.blit(label, label.get_rect(center=self.exit_rect.center))
 
     def draw_cards(self, surface: pygame.Surface):
         for card in self.cards:
