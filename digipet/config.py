@@ -1,5 +1,3 @@
-
-
 """Configuration constants for DigiAI-Pet."""
 
 # Window
@@ -30,7 +28,7 @@ DECAY = {
     "happiness": 0.7,
     "energy": 0.5,
     "health": 0.15,   # slower, rises when neglected
-    "stamina": 0.4,
+    "stamina": 0.18,  # significantly slower drain (was 0.4)
 }
 
 # Thresholds
