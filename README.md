@@ -22,10 +22,16 @@ Raise, care for, and train a Digimon-like creature that walks around your screen
   Large, clear buttons for: **Feed**, **Toilet/Clean**, **Play**, **Sleep**, **Medicine**, **Train**.
 
 - **Simple autonomous movement**  
-  The pet walks around the play area, reacts to low needs, and shows different postures/animations based on mood and energy.
+  The pet walks slowly around the larger garden scene, reacts to low needs, and shows different postures/animations based on mood and energy.
 
 - **Learning / Intelligence system**  
-  Play simple reaction or memory minigames with your pet. Repeated success raises a Learning score and can improve future performance ("the pet learns").
+  Train with Rock-Paper-Scissors or Tic-Tac-Toe. Repeated success raises a Learning score and can improve future performance ("the pet learns").
+
+- **Speed training**  
+  Play the Jump Obstacles game to build the pet's persistent Speed stat.
+
+- **Garden day/night scene**  
+  The uploaded garden image is used as the scene background, with darker real-time night lighting and a small smiling sun during daytime.
 
 - **Sickness & care consequences**  
   Neglect leads to declining health. Medicine and good care restore it. Stamina gates intense activities.
@@ -93,6 +99,11 @@ DigiAI-Pet/
 │   ├── game.py             # Main loop, movement, events, minigames
 │   └── sounds.py           # Sound manager + simple tone generation
 └── assets/
+    ├── pet_background.png  # Uploaded garden scene
+    ├── puwamon.png         # Evolution stage assets
+    ├── luminamon.png
+    ├── solarmon.png
+    ├── aethelmon.png
     └── sounds/             # Optional .wav files (auto-generated if missing)
 ```
 

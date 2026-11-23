@@ -26,6 +26,7 @@ class PetState:
     health: float = 95.0
     stamina: float = 80.0
     learning: float = 10.0          # 0-100, rises with successful games
+    speed: float = 10.0             # 0-100, rises with successful obstacle runs
     age_seconds: float = 0.0
     total_feedings: int = 0
     total_plays: int = 0
@@ -322,6 +323,26 @@ class Pet:
             self.state.happiness = max(0.0, self.state.happiness - 3)
             return "Almost... try again!"
 
+    def train_speed(self, success: bool = True) -> str:
+        """Resolve the jumping-obstacle game and improve the pet's speed."""
+        if not self.can_act():
+            return "Wait a moment..."
+        if self.state.stamina < 15:
+            return "Too exhausted to run."
+        if self.state.energy < 20:
+            return "Too tired to jump."
+        self.state.stamina = max(0.0, self.state.stamina - 12)
+        self.state.energy = max(0.0, self.state.energy - 8)
+        self.state.action_cooldown = 1.8
+        if success:
+            self.state.speed = min(100.0, self.state.speed + 5.0)
+            self.state.happiness = min(100.0, self.state.happiness + 6)
+            self.need_icon = "speed"
+            self.need_icon_timer = 2.5
+            return "Nice jump! Speed +5"
+        self.state.happiness = max(0.0, self.state.happiness - 2)
+        return "Bonk! Watch the obstacle!"
+
     # ------------------------------------------------------------------
     # Save / Load
     # ------------------------------------------------------------------
@@ -358,4 +379,5 @@ class Pet:
             "health": self.state.health,
             "stamina": self.state.stamina,
             "learning": self.state.learning,
+            "speed": self.state.speed,
         }

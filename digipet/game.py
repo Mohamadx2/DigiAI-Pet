@@ -14,13 +14,15 @@ import os
 import random
 import sys
 import time
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 import pygame
 
 from .config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, TITLE, BG_COLOR,
-    CRITICAL, LOW, HUNGER_COLOR, CLEAN_COLOR, ENERGY_COLOR, EVOLUTION_LINE
+    BACKGROUND_FILE, CRITICAL, LOW, HUNGER_COLOR, CLEAN_COLOR, ENERGY_COLOR,
+    EVOLUTION_LINE
 )
 from .pet import Pet
 from .ui import UI
@@ -183,6 +185,85 @@ class Minigame:
         return True
 
 
+class TrainingGame:
+    """Small self-contained games used to train intelligence or speed."""
+    def __init__(self):
+        self.active = False
+        self.mode: Optional[str] = None
+        self.message = ""
+        self.success = False
+        self.board = [""] * 9
+        self.obstacle_x = 0.0
+        self.jump_timer = 0.0
+        self.score = 0
+
+    def start(self, mode: str):
+        self.active = True
+        self.mode = mode
+        self.message = {
+            "rps": "Choose R, P, or S",
+            "ttt": "Your turn: click a square",
+            "jump": "Press SPACE or click to jump",
+        }[mode]
+        self.success = False
+        self.board = [""] * 9
+        self.obstacle_x = 930.0
+        self.jump_timer = 0.0
+        self.score = 0
+
+    def choose_rps(self, choice: str):
+        if not self.active or self.mode != "rps":
+            return
+        computer = random.choice("rps")
+        wins = {"r": "s", "p": "r", "s": "p"}
+        self.success = choice != computer and wins[choice] == computer
+        self.message = f"You: {choice.upper()}  Pet: {computer.upper()} — " + ("You win!" if self.success else "Try again!")
+        self.active = False
+
+    def choose_ttt(self, index: int):
+        if not self.active or self.mode != "ttt" or not 0 <= index < 9 or self.board[index]:
+            return
+        self.board[index] = "X"
+        if self._winner("X"):
+            self.success, self.message, self.active = True, "Great strategy! You win!", False
+            return
+        free = [i for i, cell in enumerate(self.board) if not cell]
+        if not free:
+            self.success, self.message, self.active = False, "A draw — try again!", False
+            return
+        self.board[random.choice(free)] = "O"
+        if self._winner("O"):
+            self.success, self.message, self.active = False, "The pet wins this round!", False
+        elif not any(not cell for cell in self.board):
+            self.success, self.message, self.active = False, "A draw — try again!", False
+
+    def _winner(self, mark: str) -> bool:
+        return any(all(self.board[i] == mark for i in line) for line in (
+            (0, 1, 2), (3, 4, 5), (6, 7, 8),
+            (0, 3, 6), (1, 4, 7), (2, 5, 8),
+            (0, 4, 8), (2, 4, 6),
+        ))
+
+    def jump(self):
+        if self.active and self.mode == "jump" and self.jump_timer <= 0:
+            self.jump_timer = 0.72
+
+    def update(self, dt: float):
+        if not self.active or self.mode != "jump":
+            return
+        self.jump_timer = max(0.0, self.jump_timer - dt)
+        self.obstacle_x -= 330 * dt
+        if self.obstacle_x < 100:
+            if self.jump_timer <= 0:
+                self.success, self.message, self.active = False, "Bonk! Jump a little later.", False
+                return
+            self.score += 1
+            self.obstacle_x = 930.0
+            self.message = f"Nice! Obstacles cleared: {self.score}"
+            if self.score >= 3:
+                self.success, self.message, self.active = True, "Speed course cleared!", False
+
+
 class Game:
     def __init__(self):
         pygame.init()
@@ -196,9 +277,12 @@ class Game:
         self.ui = UI()
         self.sounds = SoundManager()
         self.minigame = Minigame()
+        self.training = TrainingGame()
+        self.training_menu = False
         self.overlay = ActionOverlay()
         self.food_particles: List[FoodParticle] = []
         self.stage_sprites: Dict[int, pygame.Surface] = self._load_stage_sprites()
+        self.background = self._load_background()
         self.thought_text = ""
         self.thought_timer = 0.0
         self.next_thought_timer = 1.5
@@ -206,6 +290,44 @@ class Game:
         self.last_low_warning = 0.0
         self.font_lg = pygame.font.SysFont("Segoe UI", 36, bold=True)
         self.font_md = pygame.font.SysFont("Segoe UI", 22)
+
+    def _load_background(self) -> Optional[pygame.Surface]:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(project_root, BACKGROUND_FILE)
+        try:
+            image = pygame.image.load(path).convert()
+            return pygame.transform.smoothscale(image, (WINDOW_WIDTH, WINDOW_HEIGHT))
+        except (pygame.error, OSError):
+            return None
+
+    def _draw_scene(self):
+        if self.background is not None:
+            self.screen.blit(self.background, (0, 0))
+        else:
+            self.screen.fill(BG_COLOR)
+        hour = datetime.now().hour
+        is_daytime = 7 <= hour < 19
+        shade = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        if is_daytime:
+            shade.fill((255, 221, 125, 22))
+        else:
+            shade.fill((10, 22, 62, 125))
+        self.screen.blit(shade, (0, 0))
+        return is_daytime
+
+    def _draw_smiling_sun(self):
+        """Draw a small friendly sun above the pet during real-time daytime."""
+        if not (7 <= datetime.now().hour < 19):
+            return
+        cx, cy = int(self.pet.x) + 48, max(155, int(self.pet.y) - 120)
+        for angle in range(0, 360, 45):
+            dx = int(math.cos(math.radians(angle)) * 24)
+            dy = int(math.sin(math.radians(angle)) * 24)
+            pygame.draw.line(self.screen, (255, 226, 116), (cx + dx // 2, cy + dy // 2), (cx + dx, cy + dy), 3)
+        pygame.draw.circle(self.screen, (255, 215, 92), (cx, cy), 18)
+        pygame.draw.circle(self.screen, (74, 58, 54), (cx - 6, cy - 4), 2)
+        pygame.draw.circle(self.screen, (74, 58, 54), (cx + 6, cy - 4), 2)
+        pygame.draw.arc(self.screen, (74, 58, 54), (cx - 8, cy, 16, 12), 3.5, 5.9, 2)
 
     def _pick_thought(self) -> str:
         """Choose an idea that reflects the pet's current mood or needs."""
@@ -435,14 +557,128 @@ class Game:
         elif key == "train":
             if (self.pet.can_act() and self.pet.state.stamina >= 20
                     and self.pet.state.energy >= 25):
-                self.minigame.start(self.pet.state.learning)
-                self.ui.set_message("Training! Wait for the signal...")
+                self.training_menu = True
+                self.ui.set_message("Choose an intelligence or speed game")
                 return
             else:
                 msg = self.pet.train(success=False)
 
         if msg:
             self.ui.set_message(msg)
+
+    def _finish_training(self):
+        """Apply the result of the selected training game."""
+        if self.training.mode == "jump":
+            msg = self.pet.train_speed(self.training.success)
+        else:
+            msg = self.pet.train(self.training.success)
+        self.ui.set_message(msg)
+        self.sounds.play("success" if self.training.success else "fail")
+        self.training.mode = None
+
+    def _handle_training_key(self, key: int):
+        if not self.training.active:
+            return
+        if self.training.mode == "rps":
+            choices = {pygame.K_r: "r", pygame.K_p: "p", pygame.K_s: "s"}
+            if key in choices:
+                self.training.choose_rps(choices[key])
+                self._finish_training()
+        elif self.training.mode == "jump" and key == pygame.K_SPACE:
+            self.training.jump()
+
+    def _handle_training_click(self, pos: Tuple[int, int]):
+        if self.training_menu:
+            buttons = {
+                "rps": pygame.Rect(WINDOW_WIDTH // 2 - 260, WINDOW_HEIGHT // 2 - 95, 160, 60),
+                "ttt": pygame.Rect(WINDOW_WIDTH // 2 - 80, WINDOW_HEIGHT // 2 - 95, 160, 60),
+                "jump": pygame.Rect(WINDOW_WIDTH // 2 + 100, WINDOW_HEIGHT // 2 - 95, 160, 60),
+            }
+            for mode, rect in buttons.items():
+                if rect.collidepoint(pos):
+                    self.training_menu = False
+                    self.training.start(mode)
+                    return True
+            return True
+        if not self.training.active:
+            return False
+        if self.training.mode == "rps":
+            choices = {
+                "r": pygame.Rect(WINDOW_WIDTH // 2 - 220, WINDOW_HEIGHT // 2 + 10, 120, 54),
+                "p": pygame.Rect(WINDOW_WIDTH // 2 - 60, WINDOW_HEIGHT // 2 + 10, 120, 54),
+                "s": pygame.Rect(WINDOW_WIDTH // 2 + 100, WINDOW_HEIGHT // 2 + 10, 120, 54),
+            }
+            for choice, rect in choices.items():
+                if rect.collidepoint(pos):
+                    self.training.choose_rps(choice)
+                    self._finish_training()
+                    return True
+        elif self.training.mode == "ttt":
+            board_rect = pygame.Rect(WINDOW_WIDTH // 2 - 135, WINDOW_HEIGHT // 2 - 120, 270, 270)
+            if board_rect.collidepoint(pos):
+                cell_x = (pos[0] - board_rect.left) // 90
+                cell_y = (pos[1] - board_rect.top) // 90
+                self.training.choose_ttt(cell_y * 3 + cell_x)
+                if not self.training.active:
+                    self._finish_training()
+                return True
+        elif self.training.mode == "jump":
+            self.training.jump()
+            return True
+        return False
+
+    def _draw_training(self):
+        if not self.training_menu and not self.training.active:
+            return
+        overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((12, 18, 32, 185))
+        self.screen.blit(overlay, (0, 0))
+        panel = pygame.Rect(WINDOW_WIDTH // 2 - 330, WINDOW_HEIGHT // 2 - 180, 660, 360)
+        pygame.draw.rect(self.screen, (30, 44, 70), panel, border_radius=22)
+        pygame.draw.rect(self.screen, (145, 220, 255), panel, 3, border_radius=22)
+        title = self.font_lg.render("Training Lab", True, (240, 250, 255))
+        self.screen.blit(title, title.get_rect(center=(panel.centerx, panel.top + 42)))
+        if self.training_menu:
+            sub = self.font_md.render("Choose a game to build intelligence or speed", True, (190, 214, 235))
+            self.screen.blit(sub, sub.get_rect(center=(panel.centerx, panel.top + 88)))
+            buttons = [
+                ("Rock / Paper / Scissors", pygame.Rect(panel.left + 70, panel.top + 135, 160, 60)),
+                ("Tic-Tac-Toe", pygame.Rect(panel.left + 250, panel.top + 135, 160, 60)),
+                ("Jump Obstacles", pygame.Rect(panel.left + 430, panel.top + 135, 160, 60)),
+            ]
+            for label, rect in buttons:
+                pygame.draw.rect(self.screen, (52, 76, 106), rect, border_radius=12)
+                pygame.draw.rect(self.screen, (130, 210, 255), rect, 2, border_radius=12)
+                text = self.ui.font_sm.render(label, True, (240, 248, 255))
+                self.screen.blit(text, text.get_rect(center=rect.center))
+            return
+        message = self.training.message
+        text = self.font_md.render(message, True, (255, 231, 143))
+        self.screen.blit(text, text.get_rect(center=(panel.centerx, panel.top + 88)))
+        if self.training.mode == "rps":
+            for label, key, x in (("Rock", "R", -220), ("Paper", "P", -60), ("Scissors", "S", 100)):
+                rect = pygame.Rect(panel.centerx + x, panel.top + 175, 120, 54)
+                pygame.draw.rect(self.screen, (52, 76, 106), rect, border_radius=10)
+                pygame.draw.rect(self.screen, (130, 210, 255), rect, 2, border_radius=10)
+                self.screen.blit(self.ui.font_sm.render(f"{label} ({key})", True, (240, 248, 255)), self.ui.font_sm.render(f"{label} ({key})", True, (240, 248, 255)).get_rect(center=rect.center))
+        elif self.training.mode == "ttt":
+            rect = pygame.Rect(panel.centerx - 135, panel.top + 115, 270, 270)
+            for i, mark in enumerate(self.training.board):
+                cell = pygame.Rect(rect.left + (i % 3) * 90, rect.top + (i // 3) * 90, 90, 90)
+                pygame.draw.rect(self.screen, (48, 68, 95), cell)
+                pygame.draw.rect(self.screen, (145, 220, 255), cell, 2)
+                if mark:
+                    rendered = self.font_lg.render(mark, True, (255, 231, 143) if mark == "X" else (181, 220, 255))
+                    self.screen.blit(rendered, rendered.get_rect(center=cell.center))
+        elif self.training.mode == "jump":
+            ground_y = panel.top + 250
+            pygame.draw.line(self.screen, (170, 235, 170), (panel.left + 55, ground_y), (panel.right - 55, ground_y), 5)
+            player_y = ground_y - 28 - (38 if self.training.jump_timer > 0 else 0)
+            pygame.draw.rect(self.screen, (255, 214, 95), (panel.left + 90, player_y, 28, 28), border_radius=7)
+            obstacle = pygame.Rect(panel.left + int(self.training.obstacle_x * 0.55), ground_y - 32, 25, 32)
+            pygame.draw.rect(self.screen, (255, 120, 105), obstacle, border_radius=5)
+            score = self.ui.font_sm.render(f"Cleared: {self.training.score}/3", True, (225, 240, 255))
+            self.screen.blit(score, (panel.left + 55, ground_y + 18))
 
     def _finish_minigame(self):
         success = self.minigame.success
@@ -471,7 +707,11 @@ class Game:
                 if event.type == pygame.QUIT:
                     self._safe_exit()
                 elif event.type == pygame.KEYDOWN:
-                    if event.key in (pygame.K_ESCAPE, pygame.K_q):
+                    if self.training.active:
+                        self._handle_training_key(event.key)
+                    elif self.training_menu and event.key == pygame.K_ESCAPE:
+                        self.training_menu = False
+                    elif event.key in (pygame.K_ESCAPE, pygame.K_q):
                         if self.menu_open:
                             self.menu_open = False
                         else:
@@ -484,7 +724,9 @@ class Game:
                             self.minigame.react()
                             self._finish_minigame()
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    if self.minigame.active and self.minigame.phase == "show":
+                    if self.training_menu or self.training.active:
+                        self._handle_training_click(event.pos)
+                    elif self.minigame.active and self.minigame.phase == "show":
                         self.minigame.react()
                         self._finish_minigame()
                     else:
@@ -515,6 +757,9 @@ class Game:
             if not self.menu_open:
                 self.pet.update(dt)
                 self.minigame.update(dt)
+                self.training.update(dt)
+                if self.training.mode and not self.training.active:
+                    self._finish_training()
                 self.overlay.update(dt)
                 self._update_thought(dt)
 
@@ -539,11 +784,12 @@ class Game:
                     self.sounds.play("learn")
 
             # ---------- Draw ----------
-            self.screen.fill(BG_COLOR)
+            self._draw_scene()
             pygame.draw.rect(self.screen, (40, 48, 65),
-                             (0, WINDOW_HEIGHT - 150, WINDOW_WIDTH, 150))
+                             (0, WINDOW_HEIGHT - 148, WINDOW_WIDTH, 148))
 
             self._draw_pet(self.screen)
+            self._draw_smiling_sun()
             self.ui.draw_thought_bubble(self.screen, self.pet.x, self.pet.y, self.thought_text)
 
             # Food particles (drawn on top of pet)
@@ -571,6 +817,7 @@ class Game:
 
             # Toilet / Sleep visual sequences
             self.overlay.draw(self.screen, self.font_lg, self.font_md)
+            self._draw_training()
 
             if self.menu_open:
                 self.ui.draw_main_menu(self.screen)

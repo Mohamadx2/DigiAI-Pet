@@ -1,8 +1,8 @@
 """Configuration constants for DigiAI-Pet."""
 
 # Window
-WINDOW_WIDTH = 900
-WINDOW_HEIGHT = 650
+WINDOW_WIDTH = 1200
+WINDOW_HEIGHT = 900
 FPS = 60
 TITLE = "DigiAI-Pet"
 
@@ -37,11 +37,12 @@ LOW = 40
 GOOD = 70
 
 # Movement
-PET_SPEED = 1.8
-WALK_CHANCE = 0.008   # probability per frame to start walking
+PET_SPEED = 0.95
+WALK_CHANCE = 0.004   # probability per frame to start walking
 
 # Save file
 SAVE_FILE = "digipet_save.json"
+BACKGROUND_FILE = "assets/pet_background.png"
 
 # Action cooldowns (seconds)
 ACTION_COOLDOWN = 1.2

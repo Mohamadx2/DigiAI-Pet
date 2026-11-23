@@ -106,51 +106,44 @@ class UI:
         return None
 
     def draw_bars(self, surface: pygame.Surface, stats: Dict[str, float]):
-        """Top status panel with colored bars."""
-        panel = pygame.Rect(10, 10, WINDOW_WIDTH - 20, 110)
+        """Top status panel with grouped care and vitality bars."""
+        panel = pygame.Rect(10, 10, WINDOW_WIDTH - 20, 122)
         pygame.draw.rect(surface, PANEL_COLOR, panel, border_radius=10)
-
-        bar_data = [
-            ("Hunger", stats["hunger"], HUNGER_COLOR),
-            ("Clean", stats["cleanliness"], CLEAN_COLOR),
-            ("Happy", stats["happiness"], HAPPY_COLOR),
-            ("Energy", stats["energy"], ENERGY_COLOR),
-            ("Health", stats["health"], HEALTH_COLOR),
-            ("Stamina", stats["stamina"], STAMINA_COLOR),
-            ("Learn", stats["learning"], LEARN_COLOR),
+        groups = [
+            ("CARE", [
+                ("Hunger", stats["hunger"], HUNGER_COLOR),
+                ("Clean", stats["cleanliness"], CLEAN_COLOR),
+                ("Happy", stats["happiness"], HAPPY_COLOR),
+                ("Health", stats["health"], HEALTH_COLOR),
+            ]),
+            ("VITALITY", [
+                ("Energy", stats["energy"], ENERGY_COLOR),
+                ("Stamina", stats["stamina"], STAMINA_COLOR),
+                ("Learn", stats["learning"], LEARN_COLOR),
+                ("Speed", stats.get("speed", 0), (255, 180, 110)),
+            ]),
         ]
-
-        x0 = 25
-        y0 = 22
-        bar_w = 95
-        bar_h = 14
-        gap_x = 18
-
-        for i, (label, value, color) in enumerate(bar_data):
-            col = i % 4
-            row = i // 4
-            x = x0 + col * (bar_w + gap_x + 40)
-            y = y0 + row * 42
-
-            # Label
-            txt = self.font_xs.render(label, True, TEXT_COLOR)
-            surface.blit(txt, (x, y))
-
-            # Background bar
-            bg_rect = pygame.Rect(x, y + 18, bar_w, bar_h)
-            pygame.draw.rect(surface, (25, 28, 40), bg_rect, border_radius=4)
-
-            # Fill
-            fill_w = int(bar_w * max(0.0, min(1.0, value / 100.0)))
-            if fill_w > 0:
-                fill_rect = pygame.Rect(x, y + 18, fill_w, bar_h)
-                # Dim if critical
-                c = color if value > CRITICAL else (min(255, color[0]+40), max(0, color[1]-30), max(0, color[2]-30))
-                pygame.draw.rect(surface, c, fill_rect, border_radius=4)
-
-            # Value text
-            val_txt = self.font_xs.render(f"{int(value)}", True, TEXT_COLOR)
-            surface.blit(val_txt, (x + bar_w + 6, y + 16))
+        for group_index, (group_name, values) in enumerate(groups):
+            group_x = 28 + group_index * 430
+            title = self.font_xs.render(group_name, True, (167, 197, 225))
+            surface.blit(title, (group_x, 18))
+            for index, (label, value, color) in enumerate(values):
+                col = index % 2
+                row = index // 2
+                x = group_x + col * 205
+                y = 39 + row * 38
+                txt = self.font_xs.render(label, True, TEXT_COLOR)
+                surface.blit(txt, (x, y))
+                bar_w, bar_h = 145, 11
+                bg_rect = pygame.Rect(x, y + 17, bar_w, bar_h)
+                pygame.draw.rect(surface, (25, 28, 40), bg_rect, border_radius=4)
+                fill_w = int(bar_w * max(0.0, min(1.0, value / 100.0)))
+                if fill_w > 0:
+                    fill_rect = pygame.Rect(x, y + 17, fill_w, bar_h)
+                    c = color if value > CRITICAL else (min(255, color[0]+40), max(0, color[1]-30), max(0, color[2]-30))
+                    pygame.draw.rect(surface, c, fill_rect, border_radius=4)
+                val_txt = self.font_xs.render(f"{int(value)}", True, TEXT_COLOR)
+                surface.blit(val_txt, (x + bar_w + 7, y + 14))
 
     def draw_date(self, surface: pygame.Surface):
         """Show current date + time in the top-right area of the status panel."""
@@ -268,6 +261,7 @@ class UI:
             "sleep": "💤",
             "med": "💊",
             "learn": "📚",
+            "speed": "⚡",
             "sick": "🤒",
             "low": "❗",
         }
